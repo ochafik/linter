@@ -17,6 +17,8 @@ import 'package:linter/src/rules/avoid_init_to_null.dart';
 import 'package:linter/src/rules/avoid_return_types_on_setters.dart';
 import 'package:linter/src/rules/await_only_futures.dart';
 import 'package:linter/src/rules/camel_case_types.dart';
+import 'package:linter/src/rules/cancel_subscriptions.dart';
+import 'package:linter/src/rules/close_sinks.dart';
 import 'package:linter/src/rules/comment_references.dart';
 import 'package:linter/src/rules/constant_identifier_names.dart';
 import 'package:linter/src/rules/control_flow_in_finally.dart';
@@ -42,6 +44,7 @@ import 'package:linter/src/rules/test_types_in_equals.dart';
 import 'package:linter/src/rules/throw_in_finally.dart';
 import 'package:linter/src/rules/type_annotate_public_apis.dart';
 import 'package:linter/src/rules/type_init_formals.dart';
+import 'package:linter/src/rules/unawaited_futures.dart';
 import 'package:linter/src/rules/unnecessary_brace_in_string_interp.dart';
 import 'package:linter/src/rules/unnecessary_getters_setters.dart';
 import 'package:linter/src/rules/unrelated_type_equality_checks.dart';
@@ -56,6 +59,8 @@ final Registry ruleRegistry = new Registry()
   ..register(new AvoidInitToNull())
   ..register(new AwaitOnlyFutures())
   ..register(new CamelCaseTypes())
+  ..register(new CancelSubscriptions())
+  ..register(new CloseSinks())
   ..register(new CommentReferences())
   ..register(new ConstantIdentifierNames())
   ..register(new UnrelatedTypeEqualityChecks())
@@ -82,6 +87,7 @@ final Registry ruleRegistry = new Registry()
   ..register(new SuperGoesLast())
   ..register(new TypeInitFormals())
   ..register(new TypeAnnotatePublicApis())
+  ..register(new UnawaitedFutures())
   ..register(new UnnecessaryBraceInStringInterp())
   // Disabled pending fix: https://github.com/dart-lang/linter/issues/35
   //..register(new UnnecessaryGetters())
