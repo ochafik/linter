@@ -6,8 +6,7 @@ library linter.src.rules.library_names;
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:linter/src/linter.dart';
-import 'package:linter/src/util.dart';
+import 'package:linter/src/analyzer.dart';
 
 const desc =
     'Name libraries and source files using `lowercase_with_underscores`.';
@@ -15,10 +14,10 @@ const desc =
 const details = r'''
 **DO** name libraries and source files using `lowercase_with_underscores`.
 
-Some file systems are not case-sensitive, so many projects require filenames 
-to be all lowercase. Using a separate character allows names to still be 
-readable in that form. Using underscores as the separator ensures that the name 
-is still a valid Dart identifier, which may be helpful if the language later 
+Some file systems are not case-sensitive, so many projects require filenames
+to be all lowercase. Using a separate character allows names to still be
+readable in that form. Using underscores as the separator ensures that the name
+is still a valid Dart identifier, which may be helpful if the language later
 supports symbolic imports.
 
 **GOOD:**
@@ -35,11 +34,12 @@ supports symbolic imports.
 ''';
 
 class LibraryNames extends LintRule {
-  LibraryNames() : super(
-          name: 'library_names',
-          description: desc,
-          details: details,
-          group: Group.style);
+  LibraryNames()
+      : super(
+            name: 'library_names',
+            description: desc,
+            details: details,
+            group: Group.style);
 
   @override
   AstVisitor getVisitor() => new Visitor(this);
@@ -51,7 +51,7 @@ class Visitor extends SimpleAstVisitor {
 
   @override
   visitLibraryDirective(LibraryDirective node) {
-    if (!isLowerCaseUnderScoreWithDots(node.name.toString())) {
+    if (!Analyzer.facade.isLowerCaseUnderScoreWithDots(node.name.toString())) {
       rule.reportLint(node.name);
     }
   }

@@ -6,24 +6,25 @@ library linter.test.rule;
 
 import 'dart:io';
 
+import 'package:analyzer/error/error.dart';
 import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/error.dart';
 import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer/src/lint/io.dart';
+import 'package:analyzer/src/lint/linter.dart';
+import 'package:analyzer/src/lint/registry.dart';
+import 'package:linter/src/analyzer.dart';
 import 'package:linter/src/ast.dart';
 import 'package:linter/src/formatter.dart';
-import 'package:linter/src/io.dart';
-import 'package:linter/src/linter.dart';
 import 'package:linter/src/rules.dart';
 import 'package:linter/src/rules/camel_case_types.dart';
 import 'package:linter/src/rules/implementation_imports.dart';
 import 'package:linter/src/rules/package_prefixed_library_names.dart';
-import 'package:linter/src/util.dart';
 import 'package:path/path.dart' as p;
-import 'package:unittest/unittest.dart';
+import 'package:test/test.dart';
+
+import 'mock_sdk.dart';
 
 main() {
-  groupSep = ' | ';
-
   defineSanityTests();
   defineRuleTests();
   defineRuleUnitTests();
@@ -39,7 +40,7 @@ defineRuleTests() {
       for (var entry in new Directory(ruleDir).listSync()) {
         if (entry is! File || !isDartFile(entry)) continue;
         var ruleName = p.basenameWithoutExtension(entry.path);
-        testRule(ruleName, entry);
+        testRule(ruleName, entry, debug: true);
       }
     });
     group('pub', () {
@@ -59,25 +60,25 @@ defineRuleTests() {
 defineRuleUnitTests() {
   group('uris', () {
     group('isPackage', () {
-      var uris = [
+      [
         Uri.parse('package:foo/src/bar.dart'),
         Uri.parse('package:foo/src/baz/bar.dart')
-      ];
-      uris.forEach((uri) {
-        test(uri.toString(), () {
-          expect(isPackage(uri), isTrue);
+      ]
+        ..forEach((uri) {
+          test(uri.toString(), () {
+            expect(isPackage(uri), isTrue);
+          });
         });
-      });
-      var uris2 = [
+      [
         Uri.parse('foo/bar.dart'),
         Uri.parse('src/bar.dart'),
         Uri.parse('dart:async')
-      ];
-      uris2.forEach((uri) {
-        test(uri.toString(), () {
-          expect(isPackage(uri), isFalse);
+      ]
+        ..forEach((uri) {
+          test(uri.toString(), () {
+            expect(isPackage(uri), isFalse);
+          });
         });
-      });
     });
 
     group('samePackage', () {
@@ -96,24 +97,21 @@ defineRuleUnitTests() {
     });
 
     group('implementation', () {
-      var uris = [
+      [
         Uri.parse('package:foo/src/bar.dart'),
         Uri.parse('package:foo/src/baz/bar.dart')
-      ];
-      uris.forEach((uri) {
-        test(uri.toString(), () {
-          expect(isImplementation(uri), isTrue);
+      ]
+        ..forEach((uri) {
+          test(uri.toString(), () {
+            expect(isImplementation(uri), isTrue);
+          });
         });
-      });
-      var uris2 = [
-        Uri.parse('package:foo/bar.dart'),
-        Uri.parse('src/bar.dart')
-      ];
-      uris2.forEach((uri) {
-        test(uri.toString(), () {
-          expect(isImplementation(uri), isFalse);
+      [Uri.parse('package:foo/bar.dart'), Uri.parse('src/bar.dart')]
+        ..forEach((uri) {
+          test(uri.toString(), () {
+            expect(isImplementation(uri), isFalse);
+          });
         });
-      });
     });
   });
 
@@ -125,14 +123,24 @@ defineRuleUnitTests() {
       testEach(bad, isKeyWord, isFalse);
     });
     group('identifiers', () {
-      var good = ['foo', '_if', '_', 'f2', 'fooBar', 'foo_bar'];
+      var good = [
+        'foo',
+        '_if',
+        '_',
+        'f2',
+        'fooBar',
+        'foo_bar',
+        '\$foo',
+        'foo\$Bar',
+        'foo\$'
+      ];
       testEach(good, isValidDartIdentifier, isTrue);
       var bad = ['if', '42', '3', '2f'];
       testEach(bad, isValidDartIdentifier, isFalse);
     });
     group('pubspec', () {
-      testEach(['pubspec.yaml', '_pubspec.yaml'], isPubspecFileName, isTrue);
-      testEach(['__pubspec.yaml', 'foo.yaml'], isPubspecFileName, isFalse);
+      testEach(['pubspec.yaml', '_pubspec.yaml'], Analyzer.facade.isPubspecFileName, isTrue);
+      testEach(['__pubspec.yaml', 'foo.yaml'], Analyzer.facade.isPubspecFileName, isFalse);
     });
 
     group('camel case', () {
@@ -145,7 +153,11 @@ defineRuleUnitTests() {
           'F',
           'FB',
           'F1',
-          'FooBar1'
+          'FooBar1',
+          '\$Foo',
+          'Bar\$',
+          'Foo\$Generated',
+          'Foo\$Generated\$Bar'
         ];
         testEach(good, isUpperCamelCase, isTrue);
         var bad = ['fooBar', 'foo', 'f', '_f', 'F_B'];
@@ -154,7 +166,7 @@ defineRuleUnitTests() {
     });
     group('lower_case_underscores', () {
       var good = ['foo_bar', 'foo', 'foo_bar_baz', 'p', 'p1', 'p21', 'p1ll0'];
-      testEach(good, isLowerCaseUnderScore, isTrue);
+      testEach(good, Analyzer.facade.isLowerCaseUnderScore, isTrue);
 
       var bad = [
         'Foo',
@@ -166,9 +178,9 @@ defineRuleUnitTests() {
         'JS',
         'JSON',
         '1',
-        '1b'
+        '1b',
       ];
-      testEach(bad, isLowerCaseUnderScore, isFalse);
+      testEach(bad, Analyzer.facade.isLowerCaseUnderScore, isFalse);
     });
     group('qualified lower_case_underscores', () {
       var good = [
@@ -186,35 +198,51 @@ defineRuleUnitTests() {
         'a.b.c',
         'p2.src.acme'
       ];
-      testEach(good, isLowerCaseUnderScoreWithDots, isTrue);
+      testEach(good, Analyzer.facade.isLowerCaseUnderScoreWithDots, isTrue);
 
       var bad = ['Foo', 'fooBar.', '.foo_Bar', '_f', 'F_B', 'JS', 'JSON'];
-      testEach(bad, isLowerCaseUnderScoreWithDots, isFalse);
+      testEach(bad, Analyzer.facade.isLowerCaseUnderScoreWithDots, isFalse);
     });
     group('lowerCamelCase', () {
-      var good = ['fooBar', 'foo', 'f', 'f1', '_f', '_foo', '_', 'F'];
-      testEach(good, isLowerCamelCase, isTrue);
+      var good = [
+        'fooBar',
+        'foo',
+        'f',
+        'f1',
+        '_f',
+        '_foo',
+        '_',
+        'F',
+        '__x',
+        '___x',
+        '\$foo',
+        'bar\$',
+        'foo\$Generated',
+        'foo\$Generated\$Bar'
+      ];
+      testEach(good, Analyzer.facade.isLowerCamelCase, isTrue);
 
-      var bad = ['Foo', 'foo_', 'foo_bar'];
-      testEach(bad, isLowerCamelCase, isFalse);
+      var bad = ['Foo', 'foo_', 'foo_bar', '_X'];
+      testEach(bad, Analyzer.facade.isLowerCamelCase, isFalse);
     });
     group('isUpperCase', () {
       var caps = new List<int>.generate(26, (i) => 'A'.codeUnitAt(0) + i);
-      testEachInt(caps, isUpperCase, isTrue);
+      testEachInt(caps, Analyzer.facade.isUpperCase, isTrue);
 
       var bad = ['a', '1', 'z'].map((c) => c.codeUnitAt(0));
-      testEachInt(bad, isUpperCase, isFalse);
+      testEachInt(bad, Analyzer.facade.isUpperCase, isFalse);
     });
     group('libary_name_prefixes', () {
-      testEach(
-          Iterable<List<String>> values, dynamic f(List<String> s), Matcher m) {
+      testEach(Iterable<List<String>> values, dynamic f(List<String> s),
+          Matcher m) {
         values.forEach((s) => test('${s[3]}', () => expect(f(s), m)));
       }
 
-      bool isGoodPrefx(List<String> v) => matchesOrIsPrefixedBy(
-          v[3],
-          createLibraryNamePrefix(
-              libraryPath: v[0], projectRoot: v[1], packageName: v[2]));
+      bool isGoodPrefx(List<String> v) =>
+          matchesOrIsPrefixedBy(
+              v[3],
+              Analyzer.facade.createLibraryNamePrefix(
+                  libraryPath: v[0], projectRoot: v[1], packageName: v[2]));
 
       var good = [
         ['/u/b/c/lib/src/a.dart', '/u/b/c', 'acme', 'acme.src.a'],
@@ -272,16 +300,19 @@ defineSanityTests() {
     });
     test('inequality', () {
       expect(
-          () => expect(new Annotation('Message', ErrorType.LINT, 1),
-              matchesAnnotation('Message', ErrorType.HINT, 1)),
+              () =>
+              expect(new Annotation('Message', ErrorType.LINT, 1),
+                  matchesAnnotation('Message', ErrorType.HINT, 1)),
           throwsA(new isInstanceOf<TestFailure>()));
       expect(
-          () => expect(new Annotation('Message', ErrorType.LINT, 1),
-              matchesAnnotation('Message2', ErrorType.LINT, 1)),
+              () =>
+              expect(new Annotation('Message', ErrorType.LINT, 1),
+                  matchesAnnotation('Message2', ErrorType.LINT, 1)),
           throwsA(new isInstanceOf<TestFailure>()));
       expect(
-          () => expect(new Annotation('Message', ErrorType.LINT, 1),
-              matchesAnnotation('Message', ErrorType.LINT, 2)),
+              () =>
+              expect(new Annotation('Message', ErrorType.LINT, 1),
+                  matchesAnnotation('Message', ErrorType.LINT, 2)),
           throwsA(new isInstanceOf<TestFailure>()));
     });
   });
@@ -345,8 +376,8 @@ Annotation extractAnnotation(String line) {
   return null;
 }
 
-AnnotationMatcher matchesAnnotation(
-        String message, ErrorType type, int lineNumber) =>
+AnnotationMatcher matchesAnnotation(String message, ErrorType type,
+    int lineNumber) =>
     new AnnotationMatcher(new Annotation(message, type, lineNumber));
 
 testEach(Iterable<Object> values, bool f(String s), Matcher m) {
@@ -358,6 +389,8 @@ testEachInt(Iterable<Object> values, bool f(int s), Matcher m) {
 }
 
 testRule(String ruleName, File file, {bool debug: false}) {
+  registerLintRules();
+
   test('$ruleName', () {
     if (!file.existsSync()) {
       throw new Exception('No rule found defined at: ${file.path}');
@@ -375,14 +408,14 @@ testRule(String ruleName, File file, {bool debug: false}) {
       ++lineNumber;
     }
 
-    LintRule rule = ruleRegistry[ruleName];
+    LintRule rule = Registry.ruleRegistry[ruleName];
     if (rule == null) {
       print('WARNING: Test skipped -- rule `$ruleName` is not registered.');
       return;
     }
 
     LinterOptions options = new LinterOptions([rule])
-      ..useMockSdk = true
+      ..mockSdk = new MockSdk()
       ..packageRootPath = '.';
 
     DartLinter driver = new DartLinter(options);
@@ -399,7 +432,7 @@ testRule(String ruleName, File file, {bool debug: false}) {
     });
     try {
       expect(actual, unorderedMatches(expected));
-    } on Error catch (e) {
+    } catch (e) {
       if (debug) {
         // Dump results for debugging purposes.
 
@@ -407,8 +440,7 @@ testRule(String ruleName, File file, {bool debug: false}) {
         new Spelunker(file.absolute.path).spelunk();
         print('');
         // Lints.
-        var reporter = new ResultReporter(lints);
-        reporter.write();
+        new ResultReporter(lints)..write();
       }
 
       // Rethrow and fail.
@@ -429,9 +461,13 @@ class Annotation {
 
   Annotation.forError(AnalysisError error, LineInfo lineInfo)
       : this(error.message, error.errorCode.type,
-            lineInfo.getLocation(error.offset).lineNumber,
-            column: lineInfo.getLocation(error.offset).columnNumber,
-            length: error.length);
+      lineInfo
+          .getLocation(error.offset)
+          .lineNumber,
+      column: lineInfo
+          .getLocation(error.offset)
+          .columnNumber,
+      length: error.length);
 
   Annotation.forLint([String message, int column, int length])
       : this(message, ErrorType.LINT, null, column: column, length: length);
@@ -443,13 +479,14 @@ class Annotation {
   static Iterable<Annotation> fromErrors(AnalysisErrorInfo error) {
     List<Annotation> annotations = [];
     error.errors.forEach(
-        (e) => annotations.add(new Annotation.forError(e, error.lineInfo)));
+            (e) => annotations.add(new Annotation.forError(e, error.lineInfo)));
     return annotations;
   }
 }
 
 class AnnotationMatcher extends Matcher {
   final Annotation _expected;
+
   AnnotationMatcher(this._expected);
 
   @override

@@ -6,13 +6,13 @@ library linter.src.rules.unnecessary_getters_setters;
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:linter/src/analyzer.dart';
 import 'package:linter/src/ast.dart';
-import 'package:linter/src/linter.dart';
 
 const desc = 'Avoid wrapping fields in getters and setters just to be "safe".';
 
 const details = '''
-From the [style guide] (https://www.dartlang.org/articles/style-guide/):
+From the [style guide](https://www.dartlang.org/articles/style-guide/):
 
 *AVOID** wrapping fields in getters and setters just to be "safe".
 
@@ -80,8 +80,8 @@ class Visitor extends SimpleAstVisitor {
     }
 
     // Only select getters with setter pairs
-    var candidates = getters.keys.where((id) => setters.keys.contains(id));
-    candidates.forEach((id) => _visitGetterSetter(getters[id], setters[id]));
+    getters.keys.where((id) => setters.keys.contains(id))
+      ..forEach((id) => _visitGetterSetter(getters[id], setters[id]));
   }
 
   _visitGetterSetter(MethodDeclaration getter, MethodDeclaration setter) {
@@ -89,8 +89,7 @@ class Visitor extends SimpleAstVisitor {
         isSimpleGetter(getter) &&
         !isProtected(getter) &&
         !isProtected(setter)) {
-      rule.reportLint(getter.name);
-      rule.reportLint(setter.name);
+      rule..reportLint(getter.name)..reportLint(setter.name);
     }
   }
 }

@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-// test w/ `dart test/util/solo_test.dart iterable_contains_unrelated_type`
+// test w/ `pub run test -N iterable_contains_unrelated_type`
 
 void someFunction() {
   var list = <int>[];
@@ -24,7 +24,7 @@ void someFunction4() {
   if (list.contains(1)) print('someFunction4'); // OK
 }
 
-void someFucntion4_1() {
+void someFunction4_1() {
   List list;
   if(list.contains(null)) print('someFucntion4_1');
 }
@@ -96,6 +96,9 @@ void someFunction12() {
   if (list.contains(instance)) print('someFunction12'); // LINT
 }
 
+void bug_267(list) {
+  if (list.contains('1')) print('someFunction'); // https://github.com/dart-lang/linter/issues/267
+}
 
 abstract class ClassBase {}
 

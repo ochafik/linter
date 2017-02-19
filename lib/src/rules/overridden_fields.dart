@@ -8,7 +8,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:linter/src/linter.dart';
+import 'package:linter/src/analyzer.dart';
 
 const desc = r'Do not override fields.';
 
@@ -87,8 +87,7 @@ class OverriddenFields extends LintRule {
             name: 'overridden_fields',
             description: desc,
             details: details,
-            group: Group.style,
-            maturity: Maturity.experimental) {
+            group: Group.style) {
     _visitor = new _Visitor(this);
   }
 
@@ -103,6 +102,10 @@ class _Visitor extends SimpleAstVisitor {
 
   @override
   visitFieldDeclaration(FieldDeclaration node) {
+    if (node.isStatic) {
+      return;
+    }
+
     node.fields.variables.forEach((VariableDeclaration variable) {
       PropertyAccessorElement field = _getOverriddenMember(variable.element);
       if (field != null) {
@@ -124,6 +127,7 @@ class _Visitor extends SimpleAstVisitor {
       }
       return false;
     }
+
     bool containsOverriddenMember(InterfaceType i) =>
         i.accessors.any(isOverriddenMember);
     ClassElement classElement = member.enclosingElement;

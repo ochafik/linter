@@ -6,11 +6,9 @@ library linter.src.rules.close_sinks;
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:linter/src/linter.dart';
+import 'package:linter/src/analyzer.dart';
 import 'package:linter/src/util/dart_type_utilities.dart';
 import 'package:linter/src/util/leak_detector_visitor.dart';
-
-
 
 const _desc = r'Close instances of `dart.core.Sink`.';
 
@@ -59,15 +57,21 @@ void someFunctionOK() {
 ```
 ''';
 
+bool _isSink(DartType type) =>
+    DartTypeUtilities.implementsInterface(type, 'Sink', 'dart.core');
+
+bool _isSocket(DartType type) =>
+    DartTypeUtilities.implementsInterface(type, 'Socket', 'dart.io');
+
 class CloseSinks extends LintRule {
   _Visitor _visitor;
 
-  CloseSinks() : super(
-      name: 'close_sinks',
-      description: _desc,
-      details: _details,
-      group: Group.errors,
-      maturity: Maturity.experimental) {
+  CloseSinks()
+      : super(
+            name: 'close_sinks',
+            description: _desc,
+            details: _details,
+            group: Group.errors) {
     _visitor = new _Visitor(this);
   }
 
@@ -77,15 +81,13 @@ class CloseSinks extends LintRule {
 
 class _Visitor extends LeakDetectorVisitor {
   static const _closeMethodName = 'close';
+  static const _destroyMethodName = 'destroy';
+
+  @override
+  Map<DartTypePredicate, String> predicates = {
+    _isSink: _closeMethodName,
+    _isSocket: _destroyMethodName
+  };
 
   _Visitor(LintRule rule) : super(rule);
-
-  @override
-  String get methodName => _closeMethodName;
-
-  @override
-  DartTypePredicate get predicate => _isSink;
 }
-
-bool _isSink(DartType type) =>
-    DartTypeUtilities.implementsInterface(type, 'Sink', 'dart.core');

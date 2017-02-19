@@ -3,7 +3,7 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:args/args.dart';
-import 'package:linter/src/util.dart';
+import 'package:linter/src/analyzer.dart';
 
 /// AST Spelunker
 void main([List<String> args]) {

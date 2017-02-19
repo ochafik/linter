@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-// test w/ `dart test/util/solo_test.dart await_only_futures`
+// test w/ `pub run test -N await_only_futures`
 
 import 'dart:async';
 
@@ -16,4 +16,35 @@ good() async {
 
 Future awaitWrapper(dynamic future) async {
   return await future; // OK
+}
+
+class CancellableFuture<T> implements Future<T> {
+  @override
+  Stream<T> asStream() {
+    throw new Exception('Not supported.');
+  }
+
+  @override
+  Future<T> catchError(Function onError, {bool test(Object error)}) {
+    throw new Exception('Not supported.');
+  }
+
+  @override
+  Future then(onValue(T value), {Function onError}) {
+    throw new Exception('Not supported.');
+  }
+
+  @override
+  Future<T> timeout(Duration timeLimit, {onTimeout()}) {
+    throw new Exception('Not supported.');
+  }
+
+  @override
+  Future<T> whenComplete(action()) {
+    throw new Exception('Not supported.');
+  }
+}
+
+Future awaitCancellableFuture(dynamic future) async {
+  return await new CancellableFuture(); // OK
 }

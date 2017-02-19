@@ -6,14 +6,13 @@ library linter.src.rules.type_annotate_public_apis;
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:linter/src/analyzer.dart';
 import 'package:linter/src/ast.dart';
-import 'package:linter/src/linter.dart';
-import 'package:linter/src/util.dart';
 
 const desc = r'Type annotate public APIs.';
 
 const details = r'''
-From [effective dart] (https://www.dartlang.org/effective-dart/design/#do-type-annotate-public-apis):
+From [effective dart](https://www.dartlang.org/effective-dart/design/#do-type-annotate-public-apis):
 
 **DO** type annotate public APIs.
 
@@ -123,7 +122,8 @@ class _VisitorHelper extends RecursiveAstVisitor {
 
   @override
   visitSimpleFormalParameter(SimpleFormalParameter param) {
-    if (param.type == null && !isJustUnderscores(param.identifier.name)) {
+    if (param.type == null &&
+        !Analyzer.facade.isJustUnderscores(param.identifier.name)) {
       rule.reportLint(param);
     }
   }

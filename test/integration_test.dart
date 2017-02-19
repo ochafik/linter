@@ -4,21 +4,18 @@
 
 library linter.test.integration;
 
-import 'dart:convert';
 import 'dart:io';
 
-import 'package:linter/src/config.dart';
-import 'package:linter/src/io.dart';
-import 'package:linter/src/linter.dart';
+import 'package:analyzer/src/lint/config.dart';
+import 'package:analyzer/src/lint/io.dart';
+import 'package:analyzer/src/lint/linter.dart';
 import 'package:mockito/mockito.dart';
-import 'package:unittest/unittest.dart';
+import 'package:test/test.dart';
 
 import '../bin/linter.dart' as dartlint;
 import 'mocks.dart';
 
 main() {
-  groupSep = ' | ';
-
   defineTests();
 }
 
@@ -84,19 +81,10 @@ defineTests() {
         outSink = currentOut;
       });
       test('no warnings due to bad canonicalization', () {
-        var libPath = new Directory('test/_data/p4/lib').absolute.path;
-        var options = new LinterOptions([]);
-        options.runPubList = (_) {
-          var processResult = new MockProcessResult();
-          when(processResult.exitCode).thenReturn(0);
-          when(processResult.stderr).thenReturn('');
-          when(processResult.stdout).thenReturn(JSON.encode({
-            'packages': {'p4': libPath},
-            'input_files': []
-          }));
-          return processResult;
-        };
-        dartlint.runLinter(['test/_data/p4'], options);
+        var packagesFilePath =
+            new File('test/_data/p4/_packages').absolute.path;
+        dartlint.runLinter(['--packages', packagesFilePath, 'test/_data/p4'],
+            new LinterOptions([]));
         expect(collectingOut.trim(),
             startsWith('3 files analyzed, 0 issues found, in'));
       });
@@ -165,11 +153,8 @@ defineTests() {
 
       // https://github.com/dart-lang/linter/issues/246
       test('overrides across libraries', () {
-        dartlint.main([
-          'test/_data/overridden_fields',
-          '-c',
-          'test/_data/overridden_fields/lintconfig.yaml'
-        ]);
+        dartlint.main(
+            ['test/_data/overridden_fields', '--rules', 'overridden_fields']);
         expect(exitCode, 1);
         expect(
             collectingOut.trim(),
@@ -192,19 +177,21 @@ defineTests() {
       });
 
       test('close sinks', () {
+        var packagesFilePath = new File('.packages').absolute.path;
         dartlint.main([
+          '--packages',
+          packagesFilePath,
           'test/_data/close_sinks',
           '--rules=close_sinks'
         ]);
         expect(exitCode, 1);
         expect(
             collectingOut.trim(),
-            stringContainsInOrder(
-                [
-                  'IOSink _sinkA; // LINT',
-                  'IOSink _sinkF; // LINT',
-                  '1 file analyzed, 2 issues found, in'
-                ]));
+            stringContainsInOrder([
+              'IOSink _sinkA; // LINT',
+              'IOSink _sinkSomeFunction; // LINT',
+              '1 file analyzed, 2 issues found, in'
+            ]));
       });
     });
 
@@ -229,12 +216,75 @@ defineTests() {
         expect(exitCode, 1);
         expect(
             collectingOut.trim(),
-            stringContainsInOrder(
-                [
-                  'StreamSubscription _subscriptionA; // LINT',
-                  'StreamSubscription _subscriptionF; // LINT',
-                  '1 file analyzed, 2 issues found, in'
-                ]));
+            stringContainsInOrder([
+              'StreamSubscription _subscriptionA; // LINT',
+              'StreamSubscription _subscriptionF; // LINT',
+              '1 file analyzed, 3 issues found, in'
+            ]));
+      });
+    });
+
+    group('directives_ordering', () {
+      IOSink currentOut = outSink;
+      CollectingSink collectingOut = new CollectingSink();
+      setUp(() {
+        exitCode = 0;
+        outSink = collectingOut;
+      });
+      tearDown(() {
+        collectingOut.buffer.clear();
+        outSink = currentOut;
+        exitCode = 0;
+      });
+
+      test('dart_imports_go_first', () {
+        var packagesFilePath = new File('.packages').absolute.path;
+        dartlint.main([
+          '--packages',
+          packagesFilePath,
+          'test/_data/directives_ordering/dart_imports_go_first',
+          '--rules=directives_ordering'
+        ]);
+        expect(exitCode, 1);
+        expect(
+            collectingOut.trim(),
+            stringContainsInOrder([
+              "Place 'dart:' imports before other imports.",
+              "import 'dart:async';  // LINT",
+              "Place 'dart:' imports before other imports.",
+              "import 'dart:html';  // LINT",
+              '2 files analyzed, 2 issues found, in'
+            ]));
+      });
+    });
+
+    group('only_throw_errors', () {
+      IOSink currentOut = outSink;
+      CollectingSink collectingOut = new CollectingSink();
+      setUp(() {
+        exitCode = 0;
+        outSink = collectingOut;
+      });
+      tearDown(() {
+        collectingOut.buffer.clear();
+        outSink = currentOut;
+        exitCode = 0;
+      });
+
+      test('only throw errors', () {
+        dartlint.main(
+            ['test/_data/only_throw_errors', '--rules=only_throw_errors']);
+        expect(exitCode, 1);
+        expect(
+            collectingOut.trim(),
+            stringContainsInOrder([
+              "throw 'hello world!'; // LINT",
+              'throw null; // LINT',
+              'throw 7; // LINT',
+              'throw new Object(); // LINT',
+              'throw returnString(); // LINT',
+              '1 file analyzed, 5 issues found, in'
+            ]));
       });
     });
 

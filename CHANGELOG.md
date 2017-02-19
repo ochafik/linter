@@ -1,3 +1,59 @@
+# 0.1.29
+
+* New `cascade_invocations` lint.
+* Expand `await_only_futures` to accept classes that extend or implement `Future`.
+* Improve camel case regular expression tests to accept `$`s.
+* Fixes to `parameter_assignments` (improved getter handling and an NPE).
+
+# 0.1.27
+
+* Fixed cast exception in `dart_type_utilities` (dart-lang/sdk#27405).
+* New `parameter_assignments` lint.
+* New `prefer_final_fields` lint.
+* New `prefer_final_locals` lint.
+* Markdown link fixes in docs (#306).
+* Miscellaneous solo test running fixes and introduction of `solo_debug` (#304).
+
+# 0.1.26
+
+* Updated tests to use package `test` (#302).
+
+# 0.1.25
+
+* Fixed false positive on `[]=` in `always_declare_return_types` (#300).
+* New `invariant_booleans` lint.
+* New `literal_only_boolean_expressions` lint.
+* Fixed `camel_case_types` to allow `$` in identifiers (#290).
+
+# 0.1.24
+
+* Internal updates to keep up with changes in the analyzer package.
+* Updated `close_sinks` to respect calls to `destroy` (#282).
+* Fixed `only_throw_errors` to report on the expression not node.
+
+# 0.1.23
+
+* Removed `whitespace_around_ops` pending re-name and re-design (#249).
+
+# 0.1.22
+
+* Grinder support (`rule:rule_name` and `docs:location`) for rule stub and doc generation (respectively).
+* Fix to allow leading underscores in `non_constant_identifier_names`.
+* New `valid_regexps` lint (#277).
+* New `whitespace_around_ops` lint (#249).
+* Fix to `overridden_fields` to flag overridden static fields (#274).
+* New `list_remove_unrelated_type` to detect passing a non-`T` value to `List.remove()`` (#271).
+* New `empty_catches` lint to catch empty catch blocks (#43).
+* Fixed `close_sinks` false positive (#268).
+* `linter` support for `--strong` to allow for running linter in strong mode.
+
+# 0.1.21
+
+* New `only_throw_errors` lint.
+* New lint to check for `empty_statements` (#259).
+* Fixed NSME when file contents cannot be read (#260).
+* Fixed unsafe cast in `iterable_contains_unrelated_type` (#267).
+
 # 0.1.20
 
 * New `cancel_subscriptions` lint.

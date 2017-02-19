@@ -6,14 +6,14 @@ library linter.src.rules.unnecessary_getters;
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
+import 'package:linter/src/analyzer.dart';
 import 'package:linter/src/ast.dart';
-import 'package:linter/src/linter.dart';
 
 const desc =
     'Prefer using a public final field instead of a private field with a public getter.';
 
 const details = '''
-From the [style guide] (https://www.dartlang.org/articles/style-guide/):
+From the [style guide](https://www.dartlang.org/articles/style-guide/):
 
 **PREFER** using a public final field instead of a private field with a public
 getter.

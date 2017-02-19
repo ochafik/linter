@@ -5,11 +5,11 @@
 library linter.src.rules.public_member_api_docs;
 
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/standard_resolution_map.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
-import 'package:analyzer/src/generated/resolver.dart';
+import 'package:linter/src/analyzer.dart';
 import 'package:linter/src/ast.dart';
-import 'package:linter/src/linter.dart';
 
 const desc = r'Document all public members';
 
@@ -171,7 +171,9 @@ class Visitor extends GeneralizingAstVisitor {
 
   @override
   visitCompilationUnit(CompilationUnit node) {
-    LibraryElement library = node?.element?.library;
+    LibraryElement library = node == null
+        ? null
+        : resolutionMap.elementDeclaredByCompilationUnit(node)?.library;
     manager = library == null ? null : new InheritanceManager(library);
 
     Map<String, FunctionDeclaration> getters = <String, FunctionDeclaration>{};

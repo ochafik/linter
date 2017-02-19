@@ -4,9 +4,10 @@
 
 library linter.src.rules.avoid_as;
 
-import 'package:analyzer/dart/ast/ast.dart' show AsExpression, AstVisitor;
+import 'package:analyzer/dart/ast/ast.dart'
+    show AsExpression, AstNode, AstVisitor, NamedType;
 import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:linter/src/linter.dart';
+import 'package:linter/src/analyzer.dart';
 
 const desc = r'Avoid using `as`.';
 
@@ -79,7 +80,9 @@ class Visitor extends SimpleAstVisitor {
 
   @override
   visitAsExpression(AsExpression node) {
-    if (node.type.name.name != 'dynamic') {
+    // TODO(brianwilkerson) Use TypeAnnotation rather than AstNode below.
+    AstNode typeAnnotation = node.type;
+    if (typeAnnotation is NamedType && typeAnnotation.name.name != 'dynamic') {
       rule.reportLint(node);
     }
   }

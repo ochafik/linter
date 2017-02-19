@@ -6,7 +6,7 @@ library linter.src.rules.sort_constructors_first;
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:linter/src/linter.dart';
+import 'package:linter/src/analyzer.dart';
 
 const desc = r'Sort constructor declarations before method declarations.';
 
@@ -50,8 +50,8 @@ class Visitor extends SimpleAstVisitor {
   @override
   visitClassDeclaration(ClassDeclaration decl) {
     // Sort members by offset.
-    List<ClassMember> members = decl.members.toList();
-    members.sort((ClassMember m1, ClassMember m2) => m1.offset - m2.offset);
+    List<ClassMember> members = decl.members.toList()
+      ..sort((ClassMember m1, ClassMember m2) => m1.offset - m2.offset);
 
     bool seenMethod = false;
     for (ClassMember member in members) {

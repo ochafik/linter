@@ -8,10 +8,11 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:analyzer/analyzer.dart';
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/source.dart';
-import 'package:analyzer/src/services/lint.dart';
-import 'package:linter/src/linter.dart';
+
+import 'package:linter/src/analyzer.dart';
+
+final int _pipeCodeUnit = '|'.codeUnitAt(0);
+final int _slashCodeUnit = '\\'.codeUnitAt(0);
 
 String getLineContents(int lineNumber, AnalysisError error) {
   String path = error.source.fullName;
@@ -33,7 +34,6 @@ String getLineContents(int lineNumber, AnalysisError error) {
 
 String pluralize(String word, int count) =>
     "$count ${count == 1 ? '$word' : '${word}s'}";
-
 String shorten(String fileRoot, String fullName) {
   if (fileRoot == null || !fullName.startsWith(fileRoot)) {
     return fullName;
@@ -44,7 +44,7 @@ String shorten(String fileRoot, String fullName) {
 String _escapePipe(String input) {
   var result = new StringBuffer();
   for (var c in input.codeUnits) {
-    if (c == '\\' || c == '|') {
+    if (c == _slashCodeUnit || c == _pipeCodeUnit) {
       result.write('\\');
     }
     result.writeCharCode(c);
@@ -166,7 +166,8 @@ class SimpleFormatter implements ReportFormatter {
   void writeCounts() {
     var codes = stats.keys.toList()..sort();
     var largestCountGuess = 8;
-    var longest = codes.fold(0, (prev, element) => max(prev, element.length));
+    var longest =
+        codes.fold(0, (int prev, element) => max(prev, element.length));
     var tableWidth = max(_summaryLength, longest + largestCountGuess);
     var pad = tableWidth - longest;
     var line = ''.padLeft(tableWidth, '-');
@@ -249,10 +250,11 @@ class SimpleFormatter implements ReportFormatter {
     int pad = tableWidth - longestName;
     String line = ''.padLeft(tableWidth, '-');
 
-    out.writeln();
-    out.writeln(line);
-    out.writeln('${'Timings'.padRight(longestName)}${'ms'.padLeft(pad)}');
-    out.writeln(line);
+    out
+      ..writeln()
+      ..writeln(line)
+      ..writeln('${'Timings'.padRight(longestName)}${'ms'.padLeft(pad)}')
+      ..writeln(line);
     int totalTime = 0;
     for (String name in names) {
       Stopwatch stopwatch = timers[name];
@@ -260,10 +262,11 @@ class SimpleFormatter implements ReportFormatter {
       out.writeln(
           '${name.padRight(longestName)}${stopwatch.elapsedMilliseconds.toString().padLeft(pad)}');
     }
-    out.writeln(line);
-    out.writeln(
-        '${'Total'.padRight(longestName)}${totalTime.toString().padLeft(pad)}');
-    out.writeln(line);
+    out
+      ..writeln(line)
+      ..writeln(
+          '${'Total'.padRight(longestName)}${totalTime.toString().padLeft(pad)}')
+      ..writeln(line);
   }
 
   void _recordStats(AnalysisError error) {
