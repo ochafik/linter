@@ -5,9 +5,10 @@
 library linter.src.rules.unrelated_type_equality_checks;
 
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/standard_resolution_map.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:linter/src/linter.dart';
+import 'package:linter/src/analyzer.dart';
 import 'package:linter/src/util/dart_type_utilities.dart';
 
 const String _desc = r'Equality operator (==) invocation with references of'
@@ -125,15 +126,21 @@ class DerivedClass2 extends ClassBase with Mixin {}
 ```
 ''';
 
+bool _hasNonComparableOperands(BinaryExpression node) =>
+    node.leftOperand is! NullLiteral &&
+    node.rightOperand is! NullLiteral &&
+    DartTypeUtilities.unrelatedTypes(
+        node.leftOperand.bestType, node.rightOperand.bestType);
+
 class UnrelatedTypeEqualityChecks extends LintRule {
   _Visitor _visitor;
 
-  UnrelatedTypeEqualityChecks() : super(
-      name: 'unrelated_type_equality_checks',
-      description: _desc,
-      details: _details,
-      group: Group.errors,
-      maturity: Maturity.experimental) {
+  UnrelatedTypeEqualityChecks()
+      : super(
+            name: 'unrelated_type_equality_checks',
+            description: _desc,
+            details: _details,
+            group: Group.errors) {
     _visitor = new _Visitor(this);
   }
 
@@ -151,10 +158,13 @@ class _Visitor extends SimpleAstVisitor {
 
   @override
   void visitBinaryExpression(BinaryExpression node) {
-    bool isDartCoreBoolean = node.bestType.name == _boolClassName &&
-        node.bestType.element?.library?.name == _dartCoreLibraryName;
-    if (!isDartCoreBoolean || (node.operator.type != TokenType.EQ_EQ &&
-        node.operator.type != TokenType.BANG_EQ)) {
+    bool isDartCoreBoolean =
+        resolutionMap.bestTypeForExpression(node).name == _boolClassName &&
+            resolutionMap.bestTypeForExpression(node).element?.library?.name ==
+                _dartCoreLibraryName;
+    if (!isDartCoreBoolean ||
+        (node.operator.type != TokenType.EQ_EQ &&
+            node.operator.type != TokenType.BANG_EQ)) {
       return;
     }
 
@@ -163,8 +173,3 @@ class _Visitor extends SimpleAstVisitor {
     }
   }
 }
-
-bool _hasNonComparableOperands(BinaryExpression node) =>
-    node.leftOperand is! NullLiteral &&
-        node.rightOperand is! NullLiteral &&
-        DartTypeUtilities.unrelatedTypes(node.leftOperand.bestType, node.rightOperand.bestType);

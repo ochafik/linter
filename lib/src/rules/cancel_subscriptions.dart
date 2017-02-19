@@ -6,7 +6,7 @@ library linter.src.rules.cancel_subscriptions;
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:linter/src/linter.dart';
+import 'package:linter/src/analyzer.dart';
 import 'package:linter/src/util/dart_type_utilities.dart';
 import 'package:linter/src/util/leak_detector_visitor.dart';
 
@@ -57,15 +57,18 @@ void someFunctionOK() {
 ```
 ''';
 
+bool _isSubscription(DartType type) => DartTypeUtilities.implementsInterface(
+    type, 'StreamSubscription', 'dart.async');
+
 class CancelSubscriptions extends LintRule {
   _Visitor _visitor;
 
-  CancelSubscriptions() : super(
-      name: 'cancel_subscriptions',
-      description: _desc,
-      details: _details,
-      group: Group.errors,
-      maturity: Maturity.experimental) {
+  CancelSubscriptions()
+      : super(
+            name: 'cancel_subscriptions',
+            description: _desc,
+            details: _details,
+            group: Group.errors) {
     _visitor = new _Visitor(this);
   }
 
@@ -76,14 +79,10 @@ class CancelSubscriptions extends LintRule {
 class _Visitor extends LeakDetectorVisitor {
   static const _cancelMethodName = 'cancel';
 
+  @override
+  Map<DartTypePredicate, String> predicates = {
+    _isSubscription: _cancelMethodName
+  };
+
   _Visitor(LintRule rule) : super(rule);
-
-  @override
-  String get methodName => _cancelMethodName;
-
-  @override
-  DartTypePredicate get predicate => _isSubscription;
 }
-
-bool _isSubscription(DartType type) =>
-    DartTypeUtilities.implementsInterface(type, 'StreamSubscription', 'dart.async');

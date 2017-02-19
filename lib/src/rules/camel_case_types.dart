@@ -6,12 +6,12 @@ library linter.src.rules.camel_case_types;
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:linter/src/linter.dart';
+import 'package:linter/src/analyzer.dart';
 
 const desc = 'Name types using UpperCamelCase.';
 
 const details = '''
-From the [style guide] (https://www.dartlang.org/articles/style-guide/):
+From the [style guide](https://www.dartlang.org/articles/style-guide/):
 
 **DO** name types using UpperCamelCase.
 
@@ -33,14 +33,15 @@ typedef num Adder(num x, num y);
 ```
 ''';
 
-bool isUpperCamelCase(String s) => CamelCaseString.isCamelCase(s);
+bool isUpperCamelCase(String s) => Analyzer.facade.isCamelCase(s);
 
 class CamelCaseTypes extends LintRule {
-  CamelCaseTypes() : super(
-          name: 'camel_case_types',
-          description: desc,
-          details: details,
-          group: Group.style);
+  CamelCaseTypes()
+      : super(
+            name: 'camel_case_types',
+            description: desc,
+            details: details,
+            group: Group.style);
 
   @override
   AstVisitor getVisitor() => new Visitor(this);

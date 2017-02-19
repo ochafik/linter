@@ -6,13 +6,13 @@ library linter.src.rules.one_member_abstracts;
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:linter/src/linter.dart';
+import 'package:linter/src/analyzer.dart';
 
 const desc =
     'Avoid defining a one-member abstract class when a simple function will do.';
 
 const details = '''
-From the [style guide] (https://www.dartlang.org/articles/style-guide/):
+From the [style guide](https://www.dartlang.org/articles/style-guide/):
 
 **AVOID** defining a one-member abstract class when a simple function will do.
 
@@ -36,11 +36,12 @@ abstract class Predicate {
 ''';
 
 class OneMemberAbstracts extends LintRule {
-  OneMemberAbstracts() : super(
-          name: 'one_member_abstracts',
-          description: desc,
-          details: details,
-          group: Group.style);
+  OneMemberAbstracts()
+      : super(
+            name: 'one_member_abstracts',
+            description: desc,
+            details: details,
+            group: Group.style);
 
   @override
   AstVisitor getVisitor() => new Visitor(this);

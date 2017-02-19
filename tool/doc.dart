@@ -4,16 +4,16 @@
 
 import 'dart:io';
 
+import 'package:linter/src/analyzer.dart';
+import 'package:analyzer/src/lint/registry.dart';
 import 'package:args/args.dart';
-import 'package:linter/src/linter.dart';
 import 'package:linter/src/rules.dart';
 import 'package:markdown/markdown.dart';
 
 /// Generates lint rule docs for publishing to http://dart-lang.github.io/
 void main([List<String> args]) {
-  var parser = new ArgParser(allowTrailingOptions: true);
-
-  parser.addOption('out', abbr: 'o', help: 'Specifies output directory.');
+  var parser = new ArgParser(allowTrailingOptions: true)
+    ..addOption('out', abbr: 'o', help: 'Specifies output directory.');
 
   var options;
   try {
@@ -24,23 +24,7 @@ void main([List<String> args]) {
   }
 
   var outDir = options['out'];
-
-  if (outDir != null) {
-    Directory d = new Directory(outDir);
-    if (!d.existsSync()) {
-      print("Directory '${d.path}' does not exist");
-      return;
-    }
-  }
-
-  // Generate index
-  new Indexer(ruleRegistry).generate(outDir);
-
-  // Generate rule files
-  rules.forEach((l) => new Generator(l).generate(outDir));
-
-  // Generate options samples.
-  new OptionsSample(rules).generate(outDir);
+  generateDocs(outDir);
 }
 
 const ruleFootMatter = '''
@@ -49,10 +33,15 @@ rules are considered stable, while others may be marked **experimental**
 to indicate that they are under review.
 
 Rules can be selectively enabled in the analyzer using
-[analysis options](https://pub.dartlang.org/packages/analyzer).  An
-auto-generated list enabling all options is provided
-[here](options/options.html).  As some lints may contradict each other, only
-some lints will be enabled in practice, but this list should provide a
+[analysis options](https://pub.dartlang.org/packages/analyzer)
+or through an
+[analysis options file](https://www.dartlang.org/guides/language/analysis-options#the-analysis-options-file). 
+
+* **[An auto-generated list enabling all options is provided
+here.](options/options.html)** 
+
+As some lints may contradict each other, only a subset of these will be
+enabled in practice, but this list should provide a
 convenient jumping-off point.
 
 These rules are under active development.  Feedback is
@@ -63,7 +52,7 @@ const ruleLeadMatter = 'Rules are organized into familiar rule groups.';
 
 /// Sorted list of contributed lint rules.
 final List<LintRule> rules =
-    new List<LintRule>.from(ruleRegistry, growable: false)..sort();
+    new List<LintRule>.from(Registry.ruleRegistry, growable: false)..sort();
 
 String get enumerateErrorRules => rules
     .where((r) => r.group == Group.errors)
@@ -86,6 +75,27 @@ String get enumerateStyleRules => rules
     .join('\n\n');
 
 List<String> get sortedRules => rules.map((r) => r.name).toList()..sort();
+
+void generateDocs(String outDir) {
+  if (outDir != null) {
+    Directory d = new Directory(outDir);
+    if (!d.existsSync()) {
+      print("Directory '${d.path}' does not exist");
+      return;
+    }
+  }
+
+  registerLintRules();
+
+  // Generate index
+  new Indexer(Registry.ruleRegistry).generate(outDir);
+
+  // Generate rule files
+  rules.forEach((l) => new Generator(l).generate(outDir));
+
+  // Generate options samples.
+  new OptionsSample(rules).generate(outDir);
+}
 
 void printUsage(ArgParser parser, [String error]) {
   var message = 'Generates lint docs.';
@@ -325,7 +335,10 @@ linter:
 
             <h1 id="analysis-options">Analysis Options</h1>
             <p>
-               Auto-generated options enabling all lints; tailor to fit!
+               Auto-generated options enabling all lints.
+               Add these to your
+               [.analysis-options file](https://www.dartlang.org/guides/language/analysis-options#the-analysis-options-file)
+               and tailor to fit!
             </p>
 
 ${markdownToHtml(generateOptions())}

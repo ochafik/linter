@@ -8,3 +8,5 @@ pubspec.lock
 .packages
 linter.iml
 .atom
+/.vscode
+/.history

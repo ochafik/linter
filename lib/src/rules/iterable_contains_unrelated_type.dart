@@ -6,9 +6,9 @@ library linter.src.rules.iterable_contains_unrelated_type;
 
 import 'package:analyzer/analyzer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
-import 'package:analyzer/dart/element/type.dart';
-import 'package:linter/src/linter.dart';
+import 'package:linter/src/analyzer.dart';
 import 'package:linter/src/util/dart_type_utilities.dart';
+import 'package:linter/src/util/unrelated_types_visitor.dart';
 
 const _desc = r'Invocation of Iterable<E>.contains with references of unrelated'
     r' types.';
@@ -123,45 +123,6 @@ class DerivedClass3 extends ClassBase implements Mixin {}
 ```
 ''';
 
-List<InterfaceType> _findImplementedInterfaces(InterfaceType type,
-        {List<InterfaceType> acc: const []}) =>
-    acc.contains(type)
-        ? acc
-        : type.interfaces.fold(
-            <InterfaceType>[type],
-            (List<InterfaceType> acc, InterfaceType e) => new List.from(acc)
-              ..addAll(_findImplementedInterfaces(e, acc: acc)));
-
-DartType _findIterableTypeArgument(InterfaceType type,
-    {List<InterfaceType> accumulator: const []}) {
-  if (type == null || type.isObject || type.isDynamic ||
-      accumulator.contains(type)) {
-    return null;
-  }
-
-  if (_isDartCoreIterable(type)) {
-    return type.typeArguments.first;
-  }
-
-  List<InterfaceType> implementedInterfaces = _findImplementedInterfaces(type);
-  InterfaceType interface =
-      implementedInterfaces.firstWhere(_isDartCoreIterable, orElse: () => null);
-  if (interface != null && interface.typeArguments.isNotEmpty) {
-    return interface.typeArguments.first;
-  }
-
-  return _findIterableTypeArgument(type.superclass,
-      accumulator: [type]..addAll(accumulator)..addAll(implementedInterfaces));
-}
-
-bool _isDartCoreIterable(InterfaceType interface) =>
-    interface.name == 'Iterable' &&
-    interface.element.library.name == 'dart.core';
-
-bool _isParameterizedContainsInvocation(MethodInvocation node) =>
-    node.methodName.name == 'contains' &&
-    node.argumentList.arguments.length == 1;
-
 class IterableContainsUnrelatedType extends LintRule {
   _Visitor _visitor;
 
@@ -170,8 +131,7 @@ class IterableContainsUnrelatedType extends LintRule {
             name: 'iterable_contains_unrelated_type',
             description: _desc,
             details: _details,
-            group: Group.errors,
-            maturity: Maturity.experimental) {
+            group: Group.errors) {
     _visitor = new _Visitor(this);
   }
 
@@ -179,25 +139,15 @@ class IterableContainsUnrelatedType extends LintRule {
   AstVisitor getVisitor() => _visitor;
 }
 
-class _Visitor extends SimpleAstVisitor {
-  final LintRule rule;
-  _Visitor(this.rule);
+class _Visitor extends UnrelatedTypesVisitor {
+  static final _DEFINITION =
+      new InterfaceTypeDefinition('Iterable', 'dart.core');
+
+  _Visitor(LintRule rule) : super(rule);
 
   @override
-  void visitMethodInvocation(MethodInvocation node) {
-    if (!_isParameterizedContainsInvocation(node)) {
-      return;
-    }
+  InterfaceTypeDefinition get definition => _DEFINITION;
 
-    ParameterizedType type = node.target != null
-        ? node.target.bestType
-        : (node.getAncestor((a) => a is ClassDeclaration) as ClassDeclaration)
-            ?.element
-            ?.type;
-    Expression argument = node.argumentList.arguments.first;
-    if (DartTypeUtilities.unrelatedTypes(
-        argument.bestType, _findIterableTypeArgument(type))) {
-      rule.reportLint(node);
-    }
-  }
+  @override
+  String get methodName => 'contains';
 }

@@ -7,15 +7,14 @@ library linter.src.rules.unnecessary_brace_in_string_interp;
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:analyzer/src/dart/ast/token.dart';
-import 'package:linter/src/linter.dart';
+import 'package:linter/src/analyzer.dart';
 
 const desc = 'Avoid using braces in interpolation when not needed.';
 
 const details = r'''
-**AVOID** using braces in interpolation when not needed. 
+**AVOID** using braces in interpolation when not needed.
 
-If you're just interpolating a simple identifier, and it's not immediately 
+If you're just interpolating a simple identifier, and it's not immediately
 followed by more alphanumeric text, the `{}` can and should be omitted.
 
 **GOOD:**
@@ -57,7 +56,8 @@ class Visitor extends SimpleAstVisitor {
       if (expression.expression is SimpleIdentifier) {
         SimpleIdentifier identifier = expression.expression;
         Token bracket = expression.rightBracket;
-        if (bracket != null && !isIdentifierPart(bracket.next) &&
+        if (bracket != null &&
+            !isIdentifierPart(bracket.next) &&
             identifier.name.indexOf('\$') == -1) {
           rule.reportLint(expression);
         }

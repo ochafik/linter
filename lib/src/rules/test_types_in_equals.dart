@@ -6,8 +6,9 @@
 library linter.src.rules.test_types_in_equals;
 
 import 'package:analyzer/dart/ast/ast.dart';
+import 'package:analyzer/dart/ast/standard_resolution_map.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:linter/src/linter.dart';
+import 'package:linter/src/analyzer.dart';
 
 const desc = r'Test type arguments in operator ==(Object other).';
 
@@ -94,7 +95,13 @@ class _Visitor extends SimpleAstVisitor {
     }
 
     SimpleIdentifier identifier = node.expression;
-    String parameterName = declaration.parameters?.parameterElements?.first?.name;
+    var parameters = declaration.parameters;
+    String parameterName = parameters == null
+        ? null
+        : resolutionMap
+            .parameterElementsForFormalParameterList(parameters)
+            ?.first
+            ?.name;
     if (identifier.name == parameterName) {
       rule.reportLint(node);
     }
@@ -102,7 +109,7 @@ class _Visitor extends SimpleAstVisitor {
 
   bool _isEqualsOverride(MethodDeclaration declaration) =>
       declaration != null &&
-          declaration.isOperator &&
-          declaration.name.name == '==' &&
-          declaration.parameters?.parameterElements?.length == 1;
+      declaration.isOperator &&
+      declaration.name.name == '==' &&
+      declaration.parameters?.parameterElements?.length == 1;
 }

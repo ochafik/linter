@@ -14,6 +14,7 @@ import 'package:analyzer/src/generated/engine.dart'
 import 'package:analyzer/src/generated/sdk.dart' show DartSdk, SdkLibrary;
 import 'package:analyzer/src/generated/source.dart'
     show DartUriResolver, Source, SourceFactory;
+import 'package:analyzer/src/summary/idl.dart';
 
 /// Mock SDK for testing purposes.
 class MockSdk implements DartSdk {
@@ -26,6 +27,8 @@ library dart.core;
 import 'dart:async';
 
 class Object {
+  const Object();
+
   bool operator ==(other) => identical(this, other);
   String toString() => 'a string';
   int get hashCode => 0;
@@ -40,18 +43,20 @@ abstract class Comparable<T> {
   int compareTo(T other);
 }
 
-abstract class String implements Comparable<String> {
+abstract class String extends Object implements Comparable<String> {
   external factory String.fromCharCodes(Iterable<int> charCodes,
                                         [int start = 0, int end]);
   bool get isEmpty => false;
   bool get isNotEmpty => false;
   int get length => 0;
+  bool contains(String other, [int startIndex = 0]);
+  int indexOf(String other, [int start]);
   String toUpperCase();
   List<int> get codeUnits;
 }
 
 class bool extends Object {}
-abstract class num implements Comparable<num> {
+abstract class num extends Object implements Comparable<num> {
   bool operator <(num other);
   bool operator <=(num other);
   bool operator >(num other);
@@ -72,7 +77,10 @@ abstract class int extends num {
                               int onError(String source) });
 }
 class double extends num {}
-class DateTime extends Object {}
+class DateTime extends Object {
+  DateTime.now() {}
+  bool isBefore(DateTime other) => true;
+}
 class Null extends Object {}
 
 class Deprecated extends Object {
@@ -88,8 +96,12 @@ class Iterator<E> {
 
 abstract class Iterable<E> {
   Iterator<E> get iterator;
+  bool contains(Object element);
   bool get isEmpty;
   bool get isNotEmpty;
+  E get first;
+  E get last;
+  int get length;
 }
 
 abstract class List<E> implements Iterable<E> {
@@ -98,6 +110,7 @@ abstract class List<E> implements Iterable<E> {
   void operator []=(int index, E value);
   Iterator<E> get iterator => null;
   void clear();
+  int indexOf(Object element);
   bool get isEmpty;
   bool get isNotEmpty;
 }
@@ -106,6 +119,7 @@ abstract class Map<K, V> extends Object {
   Iterable<K> get keys;
   bool get isEmpty;
   bool get isNotEmpty;
+  int get length;
 }
 
 external bool identical(Object a, Object b);
@@ -116,6 +130,12 @@ class _Override {
   const _Override();
 }
 const Object override = const _Override();
+
+
+abstract class RegExp {
+  external factory RegExp(String source, {bool multiLine: false,
+                                          bool caseSensitive: true});
+}
 ''');
 
   static const _MockSdkLibrary LIB_ASYNC = const _MockSdkLibrary(
@@ -133,6 +153,8 @@ class Future<T> {
   factory Future.value([value]) => null;
   static Future wait(List<Future> futures) => null;
 }
+
+class FutureOr<T> {}
 ''',
       const <_MockSdkFile>[
         const _MockSdkFile(
@@ -163,6 +185,42 @@ import 'dart:async';
 
 abstract class Converter<S, T> implements StreamTransformer {}
 class JsonDecoder extends Converter<String, Object> {}
+''');
+
+  static const _MockSdkLibrary LIB_IO = const _MockSdkLibrary(
+      'dart:io',
+      '/lib/io/io.dart',
+      '''
+library dart.io;
+
+abstract class File implements FileSystemEntity {
+  factory File(String path) => null;
+
+  Future<DateTime> lastModified();
+  DateTime lastModifiedSync();
+
+  Future<bool> exists() async => true;
+  bool existsSync() => true;
+
+  Future<FileStat> stat() async => null;
+  FileStat statSync() => null;
+}
+
+abstract class FileSystemEntity {
+  static Future<bool> isDirectory(String path) => true;
+  static bool isDirectorySync(String path) => true;
+
+  static Future<bool> isFile(String path) => true;
+  static bool isFileSync(String path) => true;
+
+  static Future<bool> isLink(String path) => true;
+  static bool isLinkSync(String path) => true;
+
+  static Future<FileSystemEntityType> type(
+    String path, {bool followLinks: true}) async => null;
+  static FileSystemEntityType typeSync(
+    String path, {bool followLinks: true}) => null;
+}
 ''');
 
   static const _MockSdkLibrary LIB_MATH = const _MockSdkLibrary(
@@ -198,6 +256,7 @@ class HtmlElement {}
     LIB_ASYNC,
     LIB_COLLECTION,
     LIB_CONVERT,
+    LIB_IO,
     LIB_MATH,
     LIB_HTML,
   ];
@@ -286,6 +345,9 @@ class HtmlElement {}
   }
 
   @override
+  PackageBundle getLinkedBundle() => null;
+
+  @override
   SdkLibrary getSdkLibrary(String dartUri) {
     // getSdkLibrary() is only used to determine whether a library is internal
     // to the SDK.  The mock SDK doesn't have any internals, so it's safe to
@@ -302,6 +364,7 @@ class HtmlElement {}
       "dart:async/stream.dart": "/lib/async/stream.dart",
       "dart:collection": "/lib/collection/collection.dart",
       "dart:convert": "/lib/convert/convert.dart",
+      "dart:io": "/lib/io/io.dart",
       "dart:math": "/lib/math/math.dart"
     };
 
@@ -337,27 +400,7 @@ class _MockSdkLibrary implements SdkLibrary {
       [this.parts = const <_MockSdkFile>[]]);
 
   @override
-  String get category => throw unimplemented;
-
-  @override
-  bool get isDart2JsLibrary => throw unimplemented;
-
-  @override
-  bool get isDocumented => throw unimplemented;
-
-  @override
-  bool get isImplementation => throw unimplemented;
-
-  @override
-  bool get isInternal => throw unimplemented;
-
-  @override
-  bool get isShared => throw unimplemented;
-
-  @override
-  bool get isVmLibrary => throw unimplemented;
-
-  UnimplementedError get unimplemented => new UnimplementedError();
+  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 /// An [AnalysisContextImpl] that only contains sources for a Dart SDK.

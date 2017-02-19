@@ -8,23 +8,22 @@ import 'dart:io';
 
 import 'package:analyzer/dart/ast/ast.dart' show AstNode, AstVisitor;
 import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:analyzer/src/generated/error.dart' show AnalysisError, LintCode;
+import 'package:analyzer/error/error.dart';
+import 'package:analyzer/src/error/codes.dart';
+import 'package:analyzer/src/lint/analysis.dart';
+import 'package:analyzer/src/lint/io.dart';
+import 'package:analyzer/src/lint/linter.dart';
+import 'package:analyzer/src/lint/pub.dart';
 import 'package:analyzer/src/string_source.dart' show StringSource;
 import 'package:cli_util/cli_util.dart' show getSdkDir;
-import 'package:linter/src/analysis.dart';
-import 'package:linter/src/io.dart';
-import 'package:linter/src/linter.dart';
-import 'package:linter/src/pub.dart';
 import 'package:mockito/mockito.dart';
-import 'package:unittest/unittest.dart';
+import 'package:test/test.dart';
 
 import '../bin/linter.dart' as dartlint;
 import 'mocks.dart';
 import 'rule_test.dart' show ruleDir;
 
 main() {
-  groupSep = ' | ';
-
   defineLinterEngineTests();
 }
 
@@ -40,6 +39,7 @@ void defineLinterEngineTests() {
           expect(msg, expected);
         });
       }
+
       _test('exception', 'EXCEPTION: LinterException: foo',
           (r) => r.exception(new LinterException('foo')));
       _test('logError', 'ERROR: foo', (r) => r.logError('foo'));
@@ -123,8 +123,7 @@ void defineLinterEngineTests() {
       test('error collecting', () {
         var error = new AnalysisError(new StringSource('foo', ''), 0, 0,
             new LintCode('MockLint', 'This is a test...'));
-        var linter = new SourceLinter(new LinterOptions([]));
-        linter.onError(error);
+        var linter = new SourceLinter(new LinterOptions([]))..onError(error);
         expect(linter.errors.contains(error), isTrue);
       });
       test('pubspec visitor error handling', () {
@@ -135,9 +134,8 @@ void defineLinterEngineTests() {
         when(rule.getPubspecVisitor()).thenReturn(visitor);
 
         var reporter = new MockReporter();
-        var linter =
-            new SourceLinter(new LinterOptions([rule]), reporter: reporter);
-        linter.lintPubspecSource(contents: 'author: foo');
+        new SourceLinter(new LinterOptions([rule]), reporter: reporter)
+          ..lintPubspecSource(contents: 'author: foo');
         verify(reporter.exception(any)).called(1);
       });
     });
@@ -168,12 +166,6 @@ void defineLinterEngineTests() {
       });
       test('unknown arg', () {
         dartlint.main(['-XXXXX']);
-        expect(exitCode, equals(dartlint.unableToProcessExitCode));
-      });
-      //TODO: revisit error handling
-      skip_test('bad path', () {
-        var badPath = new Directory(ruleDir).path + '/___NonExistent.dart';
-        dartlint.main([badPath]);
         expect(exitCode, equals(dartlint.unableToProcessExitCode));
       });
       test('custom sdk path', () {

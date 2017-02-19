@@ -6,8 +6,7 @@ library linter.src.rules.constant_identifier_names;
 
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:linter/src/linter.dart';
-import 'package:linter/src/util.dart';
+import 'package:linter/src/analyzer.dart';
 
 const desc = r'Prefer using lowerCamelCase for constant names.';
 
@@ -16,7 +15,7 @@ const details = r'''
 
 In new code, use `lowerCamelCase` for constant variables, including enum values.
 
-In existing code that uses `ALL_CAPS_WITH_UNDERSCORES` for constants, you may 
+In existing code that uses `ALL_CAPS_WITH_UNDERSCORES` for constants, you may
 continue to use all caps to stay consistent.
 
 
@@ -44,11 +43,12 @@ class Dice {
 ''';
 
 class ConstantIdentifierNames extends LintRule {
-  ConstantIdentifierNames() : super(
-          name: 'constant_identifier_names',
-          description: desc,
-          details: details,
-          group: Group.style);
+  ConstantIdentifierNames()
+      : super(
+            name: 'constant_identifier_names',
+            description: desc,
+            details: details,
+            group: Group.style);
 
   @override
   AstVisitor getVisitor() => new Visitor(this);
@@ -59,7 +59,7 @@ class Visitor extends SimpleAstVisitor {
   Visitor(this.rule);
 
   checkIdentifier(SimpleIdentifier id) {
-    if (!isLowerCamelCase(id.name)) {
+    if (!Analyzer.facade.isLowerCamelCase(id.name)) {
       rule.reportLint(id);
     }
   }

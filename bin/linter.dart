@@ -5,13 +5,14 @@
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:analyzer/error/error.dart';
 import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/error.dart';
+import 'package:analyzer/src/lint/config.dart';
+import 'package:analyzer/src/lint/io.dart';
+import 'package:analyzer/src/lint/linter.dart';
+import 'package:analyzer/src/lint/registry.dart';
 import 'package:args/args.dart';
-import 'package:linter/src/config.dart';
 import 'package:linter/src/formatter.dart';
-import 'package:linter/src/io.dart';
-import 'package:linter/src/linter.dart';
 import 'package:linter/src/rules.dart';
 
 void main(List<String> args) {
@@ -43,6 +44,9 @@ For more information, see https://github.com/dart-lang/linter
 }
 
 void runLinter(List<String> args, LinterOptions initialLintOptions) {
+  // Force the rule registry to be populated.
+  registerLintRules();
+
   var parser = new ArgParser(allowTrailingOptions: true);
 
   parser
@@ -57,6 +61,7 @@ void runLinter(List<String> args, LinterOptions initialLintOptions) {
         help: 'Print results in a format suitable for parsing.',
         defaultsTo: false,
         negatable: false)
+    ..addFlag('strong', help: 'Use strong-mode analyzer.')
     ..addOption('config', abbr: 'c', help: 'Use configuration from this file.')
     ..addOption('dart-sdk', help: 'Custom path to a Dart SDK.')
     ..addOption('rules',
@@ -103,14 +108,13 @@ void runLinter(List<String> args, LinterOptions initialLintOptions) {
   if (lints != null && !lints.isEmpty) {
     var rules = <LintRule>[];
     for (var lint in lints) {
-      var rule = ruleRegistry[lint];
+      var rule = Registry.ruleRegistry[lint];
       if (rule == null) {
         errorSink.write('Unrecognized lint rule: $lint');
         exit(unableToProcessExitCode);
       }
       rules.add(rule);
     }
-    ;
 
     lintOptions.enabledLints = rules;
   }
@@ -119,6 +123,9 @@ void runLinter(List<String> args, LinterOptions initialLintOptions) {
   if (customSdk != null) {
     lintOptions.dartSdkPath = customSdk;
   }
+
+  var strongMode = options['strong'];
+  if (strongMode != null) lintOptions.strongMode = strongMode;
 
   var customPackageRoot = options['package-root'];
   if (customPackageRoot != null) {
@@ -138,11 +145,11 @@ void runLinter(List<String> args, LinterOptions initialLintOptions) {
     lintOptions.enableTiming = true;
   }
 
-  lintOptions.packageConfigPath = packageConfigFile;
+  lintOptions
+    ..packageConfigPath = packageConfigFile
+    ..visitTransitiveClosure = options['visit-transitive-closure'];
 
-  lintOptions.visitTransitiveClosure = options['visit-transitive-closure'];
-
-  var linter = new DartLinter(lintOptions);
+  final linter = new DartLinter(lintOptions);
 
   List<File> filesToLint = [];
   for (var path in options.rest) {
@@ -150,8 +157,7 @@ void runLinter(List<String> args, LinterOptions initialLintOptions) {
   }
 
   try {
-    Stopwatch timer = new Stopwatch();
-    timer.start();
+    final timer = new Stopwatch()..start();
     List<AnalysisErrorInfo> errors = linter.lintFiles(filesToLint);
     timer.stop();
 
@@ -161,15 +167,13 @@ void runLinter(List<String> args, LinterOptions initialLintOptions) {
 
     var commonRoot = getRoot(options.rest);
 
-    ReportFormatter reporter = new ReportFormatter(
-        errors, lintOptions.filter, outSink,
+    new ReportFormatter(errors, lintOptions.filter, outSink,
         elapsedMs: timer.elapsedMilliseconds,
         fileCount: linter.numSourcesAnalyzed,
         fileRoot: commonRoot,
         showStatistics: stats,
         machineOutput: options['machine'],
-        quiet: options['quiet']);
-    reporter.write();
+        quiet: options['quiet'])..write();
   } catch (err, stack) {
     errorSink.writeln('''An error occurred while linting
   Please report it at: github.com/dart-lang/linter/issues

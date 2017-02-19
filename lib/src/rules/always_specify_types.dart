@@ -11,15 +11,14 @@ import 'package:analyzer/dart/ast/ast.dart'
         IsExpression,
         ListLiteral,
         MapLiteral,
+        NamedType,
         SimpleFormalParameter,
-        TypeName,
         TypedLiteral,
         VariableDeclarationList;
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
-import 'package:linter/src/linter.dart';
-import 'package:linter/src/util.dart';
+import 'package:linter/src/analyzer.dart';
 
 const desc = 'Specify type annotations.';
 
@@ -103,6 +102,7 @@ class AlwaysSpecifyTypes extends LintRule {
 
 class Visitor extends SimpleAstVisitor {
   final LintRule rule;
+
   Visitor(this.rule);
 
   void checkLiteral(TypedLiteral literal) {
@@ -128,9 +128,22 @@ class Visitor extends SimpleAstVisitor {
     checkLiteral(literal);
   }
 
+  visitNamedType(NamedType namedType) {
+    DartType type = namedType.type;
+    if (type is ParameterizedType) {
+      if (type.typeParameters.isNotEmpty &&
+          namedType.typeArguments == null &&
+          namedType.parent is! IsExpression &&
+          !_isOptionallyParameterized(type)) {
+        rule.reportLint(namedType);
+      }
+    }
+  }
+
   @override
   visitSimpleFormalParameter(SimpleFormalParameter param) {
-    if (param.type == null && !isJustUnderscores(param.identifier.name)) {
+    if (param.type == null &&
+        !Analyzer.facade.isJustUnderscores(param.identifier.name)) {
       if (param.keyword != null) {
         rule.reportLintForToken(param.keyword);
       } else {
@@ -140,7 +153,7 @@ class Visitor extends SimpleAstVisitor {
   }
 
   @override
-  visitTypeName(TypeName typeName) {
+  visitTypeName(NamedType typeName) {
     DartType type = typeName.type;
     if (type is ParameterizedType) {
       if (type.typeParameters.isNotEmpty &&

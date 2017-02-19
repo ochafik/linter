@@ -4,10 +4,8 @@
 
 library linter.src.rules.pub.package_names;
 
+import 'package:linter/src/analyzer.dart';
 import 'package:linter/src/ast.dart';
-import 'package:linter/src/linter.dart';
-import 'package:linter/src/pub.dart';
-import 'package:linter/src/util.dart';
 
 const desc = 'Use `lowercase_with_underscores` for package names.';
 
@@ -24,14 +22,15 @@ with digits and isn't a reserved word.
 ''';
 
 bool isValidPackageName(String id) =>
-    isLowerCaseUnderScore(id) && isValidDartIdentifier(id);
+    Analyzer.facade.isLowerCaseUnderScore(id) && isValidDartIdentifier(id);
 
 class PubPackageNames extends LintRule {
-  PubPackageNames() : super(
-          name: 'package_names',
-          description: desc,
-          details: details,
-          group: Group.pub);
+  PubPackageNames()
+      : super(
+            name: 'package_names',
+            description: desc,
+            details: details,
+            group: Group.pub);
 
   @override
   PubspecVisitor getPubspecVisitor() => new Visitor(this);

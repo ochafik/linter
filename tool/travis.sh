@@ -10,11 +10,10 @@ set -e
 # Verify that the libraries are error free.
 dartanalyzer --fatal-warnings \
   bin/linter.dart \
-  lib/src/linter.dart \
   test/all.dart
 
 # Run the tests.
-dart test/all.dart
+dart -checked test/all.dart
 
 # Install dart_coveralls; gather and send coverage data.
 if [ "$COVERALLS_TOKEN" ]; then

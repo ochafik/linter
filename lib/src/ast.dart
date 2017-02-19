@@ -5,40 +5,12 @@
 /// Common AST helpers.
 library linter.src.ast;
 
-import 'package:analyzer/dart/ast/ast.dart'
-    show
-        Annotation,
-        AssignmentExpression,
-        AstNode,
-        Block,
-        BlockFunctionBody,
-        ClassDeclaration,
-        ClassMember,
-        ClassTypeAlias,
-        ConstructorDeclaration,
-        Declaration,
-        EnumConstantDeclaration,
-        EnumDeclaration,
-        Expression,
-        ExpressionFunctionBody,
-        ExpressionStatement,
-        FieldDeclaration,
-        FunctionDeclaration,
-        FunctionTypeAlias,
-        Identifier,
-        MethodDeclaration,
-        NamedCompilationUnitMember,
-        ReturnStatement,
-        SimpleIdentifier,
-        TopLevelVariableDeclaration,
-        TypeParameter,
-        VariableDeclaration;
+import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/token.dart';
-import 'package:analyzer/dart/element/element.dart'
-    show Element, ParameterElement, PropertyAccessorElement;
+import 'package:analyzer/dart/ast/standard_resolution_map.dart';
+import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/visitor.dart';
-import 'package:analyzer/src/dart/ast/token.dart';
-import 'package:linter/src/util.dart';
+import 'package:linter/src/analyzer.dart';
 
 /// Returns direct children of [parent].
 List<Element> getChildren(Element parent, [String name]) {
@@ -104,7 +76,8 @@ bool isProtected(Declaration declaration) =>
     declaration.metadata.any((Annotation a) => a.name.name == 'protected');
 
 /// Returns `true` if the given [ClassMember] is a public method.
-bool isPublicMethod(ClassMember m) => isMethod(m) && m.element.isPublic;
+bool isPublicMethod(ClassMember m) =>
+    isMethod(m) && resolutionMap.elementDeclaredByDeclaration(m).isPublic;
 
 /// Returns `true` if the given method [declaration] is a "simple getter".
 ///
@@ -168,7 +141,8 @@ bool isSimpleSetter(MethodDeclaration setter) {
 }
 
 /// Returns `true` if the given [id] is a valid Dart identifier.
-bool isValidDartIdentifier(String id) => !isKeyWord(id) && isIdentifier(id);
+bool isValidDartIdentifier(String id) =>
+    !isKeyWord(id) && Analyzer.facade.isIdentifier(id);
 
 /// Returns `true` if the keyword associated with this token is `var`.
 bool isVar(Token token) => isKeyword(token, Keyword.VAR);
@@ -204,7 +178,7 @@ bool _checkForSimpleSetter(MethodDeclaration setter, Expression expression) {
   var leftHandSide = assignment.leftHandSide;
   var rightHandSide = assignment.rightHandSide;
   if (leftHandSide is SimpleIdentifier && rightHandSide is SimpleIdentifier) {
-    var leftElement = leftHandSide.staticElement;
+    var leftElement = resolutionMap.staticElementForIdentifier(leftHandSide);
     if (leftElement is! PropertyAccessorElement || !leftElement.isSynthetic) {
       return false;
     }

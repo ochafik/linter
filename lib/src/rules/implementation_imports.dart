@@ -5,8 +5,9 @@
 library linter.src.rules.implementation_imports;
 
 import 'package:analyzer/dart/ast/ast.dart' show AstVisitor, ImportDirective;
+import 'package:analyzer/dart/ast/standard_resolution_map.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
-import 'package:linter/src/linter.dart';
+import 'package:linter/src/analyzer.dart';
 
 const desc = "Don't import implementation files from another package.";
 
@@ -75,8 +76,10 @@ class Visitor extends SimpleAstVisitor {
 
   @override
   visitImportDirective(ImportDirective node) {
-    Uri importUri = node?.source?.uri;
-    Uri sourceUri = node?.element?.source?.uri;
+    Uri importUri = node?.uriSource?.uri;
+    Uri sourceUri = node == null
+        ? null
+        : resolutionMap.elementDeclaredByDirective(node)?.source?.uri;
 
     // Test for 'package:*/src/'.
     if (!isImplementation(importUri)) {
